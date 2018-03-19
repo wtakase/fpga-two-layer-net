@@ -1,0 +1,12 @@
+src/xilinx-tiny-cnn/
+*.swp
+*.pyc
+__pycache__
+*-ubyte.gz
+dataset/mnist.pkl
+*.log
+*.jou
+src/network/output/
+*.xdc
+*.clock_converter
+*.no_clock_converter
