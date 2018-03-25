@@ -46,24 +46,6 @@
 namespace two_layer_net
 {
 
-void DoCompute(ExtMemWord *in, ExtMemWord *out) {
-#pragma HLS DATAFLOW
-  const unsigned int SIZE_PER_IMAGE = INPUT_SIZE + 1;
-
-  hls::stream<ExtMemWord> memInStrm("DoCompute.memInStrm");
-  hls::stream<ExtMemWord> memOutStrm("DoCompute.memOutStrm");
-
-  unsigned int offset = 0;
-  // TODO(wtakase): Need to sophisticate
-  two_layer_net::Mem2Stream_Batch<bitsPerExtMemWord, (W_B_SIZE + SIZE_PER_IMAGE * BATCH_SIZE) * bytesPerExtMemWord>(&in[offset], memInStrm, 1);
-
-  StreamingTrain_Batch(memInStrm, memOutStrm);
-
-  offset = 0;
-  // TODO(wtakase): Need to sophisticate
-  two_layer_net::Stream2Mem_Batch<bitsPerExtMemWord, W_B_SIZE * bytesPerExtMemWord>(memOutStrm, &out[offset], 1);
-}
-
 // This is needed for RUNTIME_SW
 void BlackBoxJam(ExtMemWord *in, ExtMemWord *out) {
 // pragmas for MLBP jam interface
@@ -75,7 +57,6 @@ void BlackBoxJam(ExtMemWord *in, ExtMemWord *out) {
 #pragma HLS INTERFACE m_axi offset=slave port=out bundle=hostmem depth=256
 #pragma HLS INTERFACE s_axilite port=out bundle=control
 
-  //DoCompute(in, out);
   Train_Batch(in, out);
 }
 
@@ -92,6 +73,5 @@ void BlackBoxJam(two_layer_net::ExtMemWord *in, two_layer_net::ExtMemWord *out) 
 #pragma HLS INTERFACE m_axi offset=slave port=out bundle=hostmem depth=256
 #pragma HLS INTERFACE s_axilite port=out bundle=control
 
-  //two_layer_net::DoCompute(in, out);
   two_layer_net::Train_Batch(in, out);
 }

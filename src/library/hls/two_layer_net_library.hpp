@@ -44,6 +44,5 @@
 #define _TWO_LAYER_NET_LIBRARY_HPP
 
 #include "two_layer_net.hpp"
-#include "dma.hpp"
 
 #endif

@@ -41,94 +41,12 @@
 
 #include "two_layer_net.hpp"
 
+#if defined(FPGA)
+#include "hls_math.h"
+#endif
+
 namespace two_layer_net
 {
-
-void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &out) {
-  IntMemWord w1[W1_SIZE];
-  IntMemWord b1[B1_SIZE];
-  IntMemWord w2[W2_SIZE];
-  IntMemWord b2[B2_SIZE];
-
-//DO_PRAGMA(HLS ARRAY_PARTITION variable=w1 block factor=DEF_HIDDEN1_SIZE)
-//DO_PRAGMA(HLS ARRAY_PARTITION variable=w2 block factor=DEF_BATCH_SIZE)
-//#pragma HLS ARRAY_PARTITION variable=w1 complete
-
-  for (unsigned int i = 0; i < W1_SIZE; i++) {
-    w1[i] = static_cast<IntMemWord>(in.read());
-  }
-  for (unsigned int i = 0; i < B1_SIZE; i++) {
-    b1[i] = static_cast<IntMemWord>(in.read());
-  }
-  for (unsigned int i = 0; i < W2_SIZE; i++) {
-    w2[i] = static_cast<IntMemWord>(in.read());
-  }
-  for (unsigned int i = 0; i < B2_SIZE; i++) {
-    b2[i] = static_cast<IntMemWord>(in.read());
-  }
-
-  IntMemWord xTrain[INPUT_SIZE * BATCH_SIZE];
-  IntMemWord tTrain[OUTPUT_SIZE * BATCH_SIZE];
-
-//DO_PRAGMA(HLS ARRAY_PARTITION variable=xTrain block factor=DEF_INPUT_SIZE)
-//DO_PRAGMA(HLS ARRAY_PARTITION variable=tTrain block factor=DEF_BATCH_SIZE)
-//#pragma HLS ARRAY_PARTITION variable=xTrain complete
-
-  for (unsigned int i = 0; i < BATCH_SIZE; i++) {
-    for (unsigned int j = 0; j < INPUT_SIZE; j++) {
-#pragma HLS PIPELINE II=1
-      xTrain[i * INPUT_SIZE + j] = static_cast<IntMemWord>(in.read());
-    }
-#if defined(HLSFIXED) && !defined(HLSNOSHIFT)
-    ExtMemWord label = in.read();
-    for (unsigned int j = 0; j < OUTPUT_SIZE; j++) {
-#pragma HLS PIPELINE II=1
-      ExtMemWord iterLabel = static_cast<ExtMemWord>(static_cast<ShiftMemWord>(j) >> 4);
-      if (label == iterLabel) {
-        tTrain[i * OUTPUT_SIZE + j] = 1.0;
-      } else {
-        tTrain[i * OUTPUT_SIZE + j] = 0.0;
-      }
-    }
-#else
-    unsigned int label = static_cast<unsigned int>(in.read());
-    for (unsigned int j = 0; j < OUTPUT_SIZE; j++) {
-#pragma HLS PIPELINE II=1
-      if (label == j) {
-        tTrain[i * OUTPUT_SIZE + j] = 1.0;
-      } else {
-        tTrain[i * OUTPUT_SIZE + j] = 0.0;
-      }
-    }
-#endif
-  }
-
-  // Create Two-layer network
-  DlAffine1 affine1;
-  DlAffine2 affine2;
-  DlSoftmaxWithLoss softmaxWithLoss;
-
-  // Train
-  affine1.Forward(xTrain, w1, b1);
-  affine2.Forward(affine1.out, w2, b2);
-  softmaxWithLoss.Forward(affine2.out, tTrain);
-  softmaxWithLoss.Backward(tTrain);
-  affine2.Backward(softmaxWithLoss.dx, affine1.out, w2, b2);
-  affine1.Backward(affine2.dx, xTrain, w1, b1);
-
-  for (unsigned int i = 0; i < W1_SIZE; i++) {
-    out.write(static_cast<ExtMemWord>(w1[i]));
-  }
-  for (unsigned int i = 0; i < B1_SIZE; i++) {
-    out.write(static_cast<ExtMemWord>(b1[i]));
-  }
-  for (unsigned int i = 0; i < W2_SIZE; i++) {
-    out.write(static_cast<ExtMemWord>(w2[i]));
-  }
-  for (unsigned int i = 0; i < B2_SIZE; i++) {
-    out.write(static_cast<ExtMemWord>(b2[i]));
-  }
-}
 
 void Train_Batch(ExtMemWord *in, ExtMemWord *out) {
   IntMemWord w1[W1_SIZE];
@@ -189,18 +107,169 @@ void Train_Batch(ExtMemWord *in, ExtMemWord *out) {
 #endif
   }
 
-  // Create Two-layer network
-  DlAffine1 affine1;
-  DlAffine2 affine2;
-  DlSoftmaxWithLoss softmaxWithLoss;
-
   // Train
-  affine1.Forward(xTrain, w1, b1);
-  affine2.Forward(affine1.out, w2, b2);
-  softmaxWithLoss.Forward(affine2.out, tTrain);
-  softmaxWithLoss.Backward(tTrain);
-  affine2.Backward(softmaxWithLoss.dx, affine1.out, w2, b2);
-  affine1.Backward(affine2.dx, xTrain, w1, b1);
+  // affine1 forward
+  IntMemWord affine1Out[BATCH_SIZE * AFFINE1_OUT_SIZE];
+  for (unsigned int i = 0; i < BATCH_SIZE; i++) {
+    for (unsigned int j = 0; j < AFFINE1_OUT_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+      IntMemWord sumBox = b1[j];
+      for (unsigned int k = 0; k < AFFINE1_IN_SIZE; k++) {
+//#pragma HLS PIPELINE II=1
+#if defined(HLSFIXED) && !defined(HLSNOCAST)
+        MulMemWord mulBox = static_cast<MulMemWord>(xTrain[i * AFFINE1_IN_SIZE + k]) * static_cast<MulMemWord>(w1[k * AFFINE1_OUT_SIZE + j]);
+        sumBox += static_cast<IntMemWord>(mulBox);
+#else
+        sumBox += xTrain[i * AFFINE1_IN_SIZE + k] * w1[k * AFFINE1_OUT_SIZE + j];
+#endif
+      }
+      // ReLU forward
+      if (sumBox <= 0) {
+        affine1Out[i * AFFINE1_OUT_SIZE + j] = 0;
+      } else {
+        affine1Out[i * AFFINE1_OUT_SIZE + j] = sumBox;
+      }
+    }
+  }
+
+  // affine2 forward
+  IntMemWord affine2Out[BATCH_SIZE * AFFINE2_OUT_SIZE];
+  for (unsigned int i = 0; i < BATCH_SIZE; i++) {
+    for (unsigned int j = 0; j < AFFINE2_OUT_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+      IntMemWord sumBox = b2[j];
+      for (unsigned int k = 0; k < AFFINE2_IN_SIZE; k++) {
+#if defined(HLSFIXED) && !defined(HLSNOCAST)
+        MulMemWord mulBox = static_cast<MulMemWord>(affine1Out[i * AFFINE2_IN_SIZE + k]) * static_cast<MulMemWord>(w2[k * AFFINE2_OUT_SIZE + j]);
+        sumBox += static_cast<IntMemWord>(mulBox);
+#else
+        sumBox += affine1Out[i * AFFINE2_IN_SIZE + k] * w2[k * AFFINE2_OUT_SIZE + j];
+#endif
+      }
+      affine2Out[i * AFFINE2_OUT_SIZE + j] = sumBox;
+    }
+  }
+
+  // softmax forward
+  IntMemWord softmaxOut[BATCH_SIZE * SOFTMAX_SIZE];
+  for (unsigned int i = 0; i < BATCH_SIZE; i++) {
+    IntMemWord xMax = affine2Out[i * SOFTMAX_SIZE];
+    for (unsigned int j = 1; j < SOFTMAX_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+      if (affine2Out[i * SOFTMAX_SIZE + j] > xMax) {
+        xMax = affine2Out[i * SOFTMAX_SIZE + j];
+      }
+    }
+    IntMemWord expXSubXmaxSum = 0;
+    IntMemWord preOut[SOFTMAX_SIZE];
+    for (unsigned int j = 0; j < SOFTMAX_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+      float xSubXMaxFloat = static_cast<float>(affine2Out[i * SOFTMAX_SIZE + j] - xMax);
+#if defined(FPGA)
+      IntMemWord expXSubXmax = hls::expf(xSubXMaxFloat);
+#else
+      IntMemWord expXSubXmax = std::exp(xSubXMaxFloat);
+#endif
+      preOut[j] = expXSubXmax;
+      expXSubXmaxSum += expXSubXmax;
+    }
+    for (unsigned int j = 0; j < SOFTMAX_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+#if defined(HLSFIXED) && !defined(HLSNOCAST)
+      MulMemWord mulBox = static_cast<MulMemWord>(preOut[j]) / static_cast<MulMemWord>(expXSubXmaxSum);
+      softmaxOut[i * SOFTMAX_SIZE + j] = static_cast<IntMemWord>(mulBox);
+#else
+      softmaxOut[i * SOFTMAX_SIZE + j] = preOut[j] / expXSubXmaxSum;
+#endif
+    }
+  }
+
+  // softmax backward
+  IntMemWord softmaxDx[BATCH_SIZE * SOFTMAX_SIZE];
+  for (unsigned int i = 0; i < BATCH_SIZE; i++) {
+//#pragma HLS PIPELINE II=1
+    for (unsigned int j = 0; j < SOFTMAX_SIZE; j++) {
+#if defined(HLSFIXED) && !defined(HLSNOCAST)
+      MulMemWord mulBox = static_cast<MulMemWord>(softmaxOut[i * SOFTMAX_SIZE + j] - tTrain[i * SOFTMAX_SIZE + j]);
+      mulBox = mulBox / static_cast<MulMemWord>(BATCH_SIZE);
+      softmaxDx[i * SOFTMAX_SIZE + j] = static_cast<IntMemWord>(mulBox);
+#else
+      softmaxDx[i * SOFTMAX_SIZE + j] = (softmaxOut[i * SOFTMAX_SIZE + j] - tTrain[i * SOFTMAX_SIZE + j]) / static_cast<IntMemWord>(BATCH_SIZE);
+#endif
+    }
+  }
+
+  // affine2 backward
+  IntMemWord affine2Dx[BATCH_SIZE * AFFINE2_IN_SIZE];
+  for (unsigned int i = 0; i < BATCH_SIZE; i++) {
+    for (unsigned int j = 0; j < AFFINE2_IN_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+      IntMemWord sumBox = 0;
+      for (unsigned int k = 0; k < AFFINE2_OUT_SIZE; k++) {
+#if defined(HLSFIXED) && !defined(HLSNOCAST)
+        MulMemWord mulBox = static_cast<MulMemWord>(softmaxDx[i * AFFINE2_OUT_SIZE + k]) * static_cast<MulMemWord>(w2[j * AFFINE2_OUT_SIZE + k]);
+        sumBox += static_cast<IntMemWord>(mulBox);
+#else
+        sumBox += softmaxDx[i * AFFINE2_OUT_SIZE + k] * w2[j * AFFINE2_OUT_SIZE + k];
+#endif
+      }
+      affine2Dx[i * AFFINE2_IN_SIZE + j] = sumBox;
+    }
+  }
+  for (unsigned int i = 0; i < AFFINE2_IN_SIZE; i++) {
+    for (unsigned int j = 0; j < AFFINE2_OUT_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+      IntMemWord sumBox = 0;
+      for (unsigned int k = 0; k < BATCH_SIZE; k++) {
+#if defined(HLSFIXED) && !defined(HLSNOCAST)
+        MulMemWord mulBox = static_cast<MulMemWord>(affine1Out[k * AFFINE2_IN_SIZE + i]) * static_cast<MulMemWord>(softmaxDx[k * AFFINE2_OUT_SIZE + j]);
+        sumBox += static_cast<IntMemWord>(mulBox);
+#else
+        sumBox += affine1Out[k * AFFINE2_IN_SIZE + i] * softmaxDx[k * AFFINE2_OUT_SIZE + j];
+#endif
+      }
+      w2[i * AFFINE2_OUT_SIZE + j] -= sumBox * LEARNING_RATE;
+    }
+  }
+  for (unsigned int j = 0; j < AFFINE2_OUT_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+    IntMemWord sumBox = 0;
+    for (unsigned int k = 0; k < BATCH_SIZE; k++) {
+      sumBox += softmaxDx[k * AFFINE2_OUT_SIZE + j];
+    }
+    b2[j] -= sumBox * LEARNING_RATE;
+  }
+
+  // affine1 backward
+  for (unsigned int i = 0; i < AFFINE1_IN_SIZE; i++) {
+    for (unsigned int j = 0; j < AFFINE1_OUT_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+      IntMemWord sumBox = 0;
+      for (unsigned int k = 0; k < BATCH_SIZE; k++) {
+        // ReLU backward
+        if (out[k * AFFINE1_OUT_SIZE + j] != 0) {
+#if defined(HLSFIXED) && !defined(HLSNOCAST)
+          MulMemWord mulBox = static_cast<MulMemWord>(xTrain[k * AFFINE1_IN_SIZE + i]) * static_cast<MulMemWord>(affile2Dx[k * AFFINE1_OUT_SIZE + j]);
+          sumBox += static_cast<IntMemWord>(mulBox);
+#else
+          sumBox += xTrain[k * AFFINE1_IN_SIZE + i] * affile2Dx[k * AFFINE1_OUT_SIZE + j];
+#endif
+        }
+      }
+      w1[i * AFFINE1_OUT_SIZE + j] -= sumBox * LEARNING_RATE;
+    }
+  }
+  for (unsigned int j = 0; j < AFFINE1_OUT_SIZE; j++) {
+//#pragma HLS PIPELINE II=1
+    IntMemWord sumBox = 0;
+    for (unsigned int k = 0; k < BATCH_SIZE; k++) {
+      // ReLU backward
+      if (affine1Out[k * AFFINE1_OUT_SIZE + j] != 0) {
+        sumBox += affine2Dx[k * AFFINE1_OUT_SIZE + j];
+      }
+    }
+    b1[j] -= sumBox * LEARNING_RATE;
+  }
 
   offset = 0;
   for (unsigned int i = 0; i < W1_SIZE; i++) {
@@ -218,14 +287,6 @@ void Train_Batch(ExtMemWord *in, ExtMemWord *out) {
   for (unsigned int i = 0; i < B2_SIZE; i++) {
     out[offset + i] = static_cast<ExtMemWord>(b2[i]);
   }
-}
-
-void StreamingAdd_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &out) {
-  IntMemWord in1;
-  IntMemWord in2;
-  in1 = static_cast<IntMemWord>(in.read());
-  in2 = static_cast<IntMemWord>(in.read());
-  out.write(static_cast<ExtMemWord>(in1 + in2));
 }
 
 } // namespace two_layer_net
