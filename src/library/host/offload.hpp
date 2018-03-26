@@ -71,9 +71,7 @@ void PlatformInit();
 
 void PlatformDeinit();
 
-std::vector<float> trainMNIST(std::vector<tiny_cnn::vec_t> &trainImages, std::vector<tiny_cnn::label_t> &trainLabels, const unsigned int imageNum, float &usecPerImage, float *params); 
-
-std::vector<float> add(const unsigned int imageNum, float &usecPerImage);
+std::vector<float> trainMNIST(std::vector<tiny_cnn::vec_t> &trainImages, std::vector<tiny_cnn::label_t> &trainLabels, const unsigned int imageNum, float &usecPerImage, float *params, unsigned int countLoopBase);
 
 #if defined(OFFLOAD) && !defined(RAWHLS)
 extern Admxrc3Driver* thePlatform;

@@ -43,6 +43,8 @@
 
 #if defined(FPGA)
 #include "hls_math.h"
+#else
+#include "cmath"
 #endif
 
 namespace two_layer_net
@@ -252,7 +254,7 @@ void Train_Batch(ExtMemWord *in, ExtMemWord *out) {
           MulMemWord mulBox = static_cast<MulMemWord>(xTrain[k * AFFINE1_IN_SIZE + i]) * static_cast<MulMemWord>(affile2Dx[k * AFFINE1_OUT_SIZE + j]);
           sumBox += static_cast<IntMemWord>(mulBox);
 #else
-          sumBox += xTrain[k * AFFINE1_IN_SIZE + i] * affile2Dx[k * AFFINE1_OUT_SIZE + j];
+          sumBox += xTrain[k * AFFINE1_IN_SIZE + i] * affine2Dx[k * AFFINE1_OUT_SIZE + j];
 #endif
         }
       }

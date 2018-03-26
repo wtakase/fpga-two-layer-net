@@ -48,6 +48,7 @@ static std::vector<tiny_cnn::label_t> trainLabels;
 static std::vector<tiny_cnn::vec_t> trainImages;
 
 static float *params = new float[W_B_SIZE];
+static unsigned int countLoopBase;
 
 extern "C" void load_images(const char *path)
 {
@@ -62,8 +63,8 @@ extern "C" void load_images(const char *path)
 extern "C" void init_param(float *param, unsigned int rowNum, unsigned int colNum, double weightInitStd)
 {
   std::random_device seed_gen;
-  std::default_random_engine engine(seed_gen());
-  //std::default_random_engine engine(1);
+  //std::default_random_engine engine(seed_gen());
+  std::default_random_engine engine(1);
   std::normal_distribution<> dist(0.0, weightInitStd);
   for (int i = 0; i < rowNum; ++i) {
     for (int j = 0; j < colNum; ++j) {
@@ -87,6 +88,7 @@ extern "C" void init_params()
   init_param(&params[in_offset], HIDDEN1_SIZE, OUTPUT_SIZE, WEIGHT_INIT_STD);
   in_offset += W2_SIZE;
   init_param(&params[in_offset], 1, OUTPUT_SIZE, 0.0);
+  countLoopBase = 0;
 }
 
 extern "C" float *train(unsigned int imageNum, float *usecPerImage)
@@ -95,7 +97,8 @@ extern "C" float *train(unsigned int imageNum, float *usecPerImage)
   std::vector<float> wBResult;
   float usecPerImage_int;
   //std::cout << "0: params[0]: " << params[0] << std::endl;
-  wBResult = two_layer_net::trainMNIST(trainImages, trainLabels, imageNum, usecPerImage_int, params);
+  wBResult = two_layer_net::trainMNIST(trainImages, trainLabels, imageNum, usecPerImage_int, params, countLoopBase);
+  countLoopBase += 1;
   float *result = new float[W_B_SIZE];
   std::copy(wBResult.begin(), wBResult.end(), result);
   if (usecPerImage) {
@@ -122,6 +125,7 @@ extern "C" void free_params()
 {
   //delete params;
   //params = 0;
+  countLoopBase = 0;
 }
 
 extern "C" void deinit() {
