@@ -148,7 +148,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
       expXSubXmaxSum += softmaxOut[j];
     }
     // backward
-    IntMemWord label = tTrain[i];
+    volatile unsigned int label = static_cast<unsigned int>(tTrain[i]);
     for (unsigned int j = 0; j < SOFTMAX_SIZE; j++) {
 //#pragma HLS PIPELINE II=1
 #if defined(HLSFIXED) && !defined(HLSNOCAST)
@@ -371,51 +371,11 @@ void Train_Batch(ExtMemWord *in, ExtMemWord *out) {
       mulBox /= static_cast<MulMemWord>(BATCH_SIZE);
       softmaxDx[i * SOFTMAX_SIZE + j] = static_cast<IntMemWord>(mulBox);
 #else
-      //IntMemWord softmaxOutEach = softmaxOut[j] / expXSubXmaxSum;
-      //IntMemWord softmaxOutEach = softmaxOut[j];
       if (j == label) {
         softmaxDx[i * SOFTMAX_SIZE + j] = (softmaxOut[j] - expXSubXmaxSum) / denominator;
       } else {
         softmaxDx[i * SOFTMAX_SIZE + j] = softmaxOut[j] / denominator;
       }
-      //softmaxDx[i * SOFTMAX_SIZE + j] = softmaxOutEach / static_cast<IntMemWord>(BATCH_SIZE);
-      //softmaxDx[i * SOFTMAX_SIZE + j] = softmaxOutEach / denominator;
-
-      //softmaxOut[i * SOFTMAX_SIZE + j] = preOut[j] / expXSubXmaxSum;
-
-      // NG:
-      //float softmaxOutFloat = outFloat[j] / expXSubXmaxSumFloat;
-      //softmaxDx[i * SOFTMAX_SIZE + j] = static_cast<IntMemWord>((softmaxOutFloat - tTrainFloat[i * SOFTMAX_SIZE + j]) / static_cast<float>(BATCH_SIZE));
-
-      // NG:
-      //IntMemWord softmaxOutEach = preOut[j] / expXSubXmaxSum;
-      //IntMemWord tTrainEach = tTrain[i * SOFTMAX_SIZE + j];
-      //softmaxDx[i * SOFTMAX_SIZE + j] = (softmaxOutEach - tTrainEach) / static_cast<IntMemWord>(BATCH_SIZE);
-
-      // NG:
-      //eachOut[j] /= expXSubXmaxSum;
-      //softmaxDx[i * SOFTMAX_SIZE + j] = (eachOut[j] - eachTTrain[j]) / static_cast<IntMemWord>(BATCH_SIZE);
-
-      // NG:
-      //float floatTTrain = static_cast<float>(eachTTrain[j]);
-      //float floatOut = static_cast<float>(eachOut[j]);
-      //float floatSoftmaxOut = floatOut / static_cast<float>(expXSubXmaxSum);
-      //softmaxDx[i * SOFTMAX_SIZE + j] = static_cast<IntMemWord>(floatSoftmaxOut - floatTTrain) / static_cast<IntMemWord>(BATCH_SIZE);
-/*
-      IntMemWord eachSoftmaxOut = eachOut[j];
-      if (j == eachTTrain) {
-        eachSoftmaxOut -= expXSubXmaxSum;
-      }
-*/
-      // NG: softmaxDx[i * SOFTMAX_SIZE + j] = softmaxOutEach / denominator;
-      // NG: softmaxDx[i * SOFTMAX_SIZE + j] = softmaxOutEach;
-
-      // OK(//expXSubXmaxSum += expXSubXmax;): softmaxDx[i * SOFTMAX_SIZE + j] = eachOut[j];
-      //softmaxDx[i * SOFTMAX_SIZE + j] = eachSoftmaxOut / denominator;
-
-      // OK: softmaxDx[i * SOFTMAX_SIZE + j] = static_cast<IntMemWord>(expXSubXmaxSum) / static_cast<IntMemWord>(BATCH_SIZE);
-
-      // OK: softmaxDx[i * SOFTMAX_SIZE + j] = static_cast<IntMemWord>(i * SOFTMAX_SIZE + j) / static_cast<IntMemWord>(BATCH_SIZE);
 #endif
     }
   }

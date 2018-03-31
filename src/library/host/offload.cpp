@@ -159,15 +159,6 @@ std::vector<float> trainMNIST(std::vector<tiny_cnn::vec_t> &trainImages, std::ve
 #endif
     // get trained weights and biases
     memcpy(packedIn, packedOut, sizeof(ExtMemWord) * W_B_SIZE);
-/////////////////////
-/*
-    std::cout << "ExtMemWord expected_out[19885] = {" << std::endl;
-    for (unsigned int k = 0; k < W_B_SIZE-1; k++) {
-      std::cout << packedOut[k] << "," << std::endl;
-    }
-    std::cout << packedOut[W_B_SIZE-1] << "};" << std::endl;
-*/
-/////////////////////
   }
 
   // put trained weights and biases

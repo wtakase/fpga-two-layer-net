@@ -67,8 +67,6 @@ void DoCompute(ExtMemWord *in, ExtMemWord *out) {
 
 // This is needed for RUNTIME_SW
 void BlackBoxJam(ExtMemWord *in, ExtMemWord *out) {
-//#pragma HLS INTERFACE m_axi offset=slave port=in bundle=hostmem0 depth=205140
-//#pragma HLS INTERFACE m_axi offset=slave port=out bundle=hostmem1 depth=79540
 #pragma HLS INTERFACE m_axi offset=slave port=in bundle=hostmem0 depth=51285
 #pragma HLS INTERFACE m_axi offset=slave port=out bundle=hostmem1 depth=19885
 #pragma HLS INTERFACE s_axilite port=in bundle=control
@@ -82,8 +80,6 @@ void BlackBoxJam(ExtMemWord *in, ExtMemWord *out) {
 
 // This is needed for RUNTIME_HW
 void BlackBoxJam(two_layer_net::ExtMemWord *in, two_layer_net::ExtMemWord *out) {
-//#pragma HLS INTERFACE m_axi offset=slave port=in bundle=hostmem0 depth=205140
-//#pragma HLS INTERFACE m_axi offset=slave port=out bundle=hostmem1 depth=79540
 #pragma HLS INTERFACE m_axi offset=slave port=in bundle=hostmem0 depth=51285
 #pragma HLS INTERFACE m_axi offset=slave port=out bundle=hostmem1 depth=19885
 #pragma HLS INTERFACE s_axilite port=in bundle=control

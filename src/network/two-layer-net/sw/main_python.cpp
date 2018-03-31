@@ -53,7 +53,6 @@ static float *params = new float[W_B_SIZE];
 static unsigned int countLoopBase;
 
 extern "C" void load_images(const char *path)
-//void load_images(const char *path)
 {
   std::string trainLabelPath(path);
   trainLabelPath.append("/train-labels-idx1-ubyte");
@@ -64,17 +63,11 @@ extern "C" void load_images(const char *path)
 }
 
 extern "C" void init_param(float *param, unsigned int rowNum, unsigned int colNum, double weightInitStd)
-//void init_param(float *param, unsigned int rowNum, unsigned int colNum, double weightInitStd)
 {
   //std::random_device seed_gen;
   ////std::default_random_engine engine(seed_gen());
   //std::default_random_engine engine(1);
   //std::normal_distribution<> dist(0.0, weightInitStd);
-
-  //std::mt19937 engine;
-  //engine.seed(time(0));
-  //std::mt19937 engine;
-  //engine.seed(1);
 
   srand(1);
   for (int i = 0; i < rowNum; ++i) {
@@ -83,15 +76,13 @@ extern "C" void init_param(float *param, unsigned int rowNum, unsigned int colNu
         param[i * colNum + j] = 0.0;
       } else {
         //param[i * colNum + j] = (float)dist(engine);
-        //param[i * colNum + j] = (float)std::uniform_real_distribution<float>(0.0, weightInitStd)(engine);
-          param[i * colNum + j] = (((float)rand() + 1.0) / ((float)RAND_MAX + 2.0)) * weightInitStd;
+        param[i * colNum + j] = (((float)rand() + 1.0) / ((float)RAND_MAX + 2.0)) * weightInitStd;
       }
     }
   }
 }
 
 extern "C" void init_params()
-//void init_params()
 {
   // initialize weights and biases and pack them
   unsigned int in_offset = 0;
@@ -106,12 +97,10 @@ extern "C" void init_params()
 }
 
 extern "C" float *train(unsigned int imageNum, float *usecPerImage)
-//float *train(unsigned int imageNum, float *usecPerImage)
 {
   two_layer_net::PlatformInit();
   std::vector<float> wBResult;
   float usecPerImage_int;
-  //std::cout << "0: params[0]: " << params[0] << std::endl;
   wBResult = two_layer_net::trainMNIST(trainImages, trainLabels, imageNum, usecPerImage_int, params, countLoopBase);
   countLoopBase += 1;
   float *result = new float[W_B_SIZE];
@@ -120,26 +109,22 @@ extern "C" float *train(unsigned int imageNum, float *usecPerImage)
     *usecPerImage = usecPerImage_int;
   }
   std::copy(wBResult.begin(), wBResult.end(), params);
-  //std::cout << "1: params[0]: " << params[0] << std::endl;
   return result;
 }
 
 extern "C" void free_results(float *result)
-//void free_results(float *result)
 {
   delete result;
   result = 0;
 }
 
 extern "C" void free_images()
-//void free_images()
 {
   std::vector<tiny_cnn::label_t>().swap(trainLabels);
   std::vector<tiny_cnn::vec_t>().swap(trainImages);
 }
 
 extern "C" void free_params()
-//void free_params()
 {
   //delete params;
   //params = 0;
@@ -147,6 +132,5 @@ extern "C" void free_params()
 }
 
 extern "C" void deinit() {
-//void deinit() {
   two_layer_net::PlatformDeinit();
 }
