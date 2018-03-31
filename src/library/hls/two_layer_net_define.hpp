@@ -22,20 +22,16 @@ namespace two_layer_net
 //typedef ap_fixed<16, 4, AP_TRN, AP_SAT> IntMemWord;
 //typedef ap_fixed<14, 4, AP_TRN, AP_SAT> IntMemWord;
 //typedef ap_fixed<12, 4, AP_TRN, AP_SAT> IntMemWord;
-typedef ap_fixed<32, 8> IntMemWord;
+typedef ap_fixed<32, 8, AP_TRN, AP_SAT> IntMemWord;
 
 //typedef ap_fixed<32, 8, AP_RND, AP_SAT> ExtMemWord;
-typedef ap_fixed<32, 8> ExtMemWord;
+typedef ap_fixed<32, 8, AP_TRN, AP_SAT> ExtMemWord;
 const unsigned int bytesPerExtMemWord = sizeof(ExtMemWord);
 const unsigned int bitsPerExtMemWord = sizeof(ExtMemWord) * 8;
 
 #if !defined(HLSNOCAST)
 //typedef float MulMemWord;
 typedef ap_fixed<32, 8, AP_RND, AP_SAT> MulMemWord;
-#endif
-
-#if !defined(HLSNOSHIFT)
-typedef ap_fixed<32, 8, AP_RND, AP_SAT> ShiftMemWord;
 #endif
 
 } // namespace two_layer_net

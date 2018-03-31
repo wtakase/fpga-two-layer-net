@@ -15,7 +15,8 @@ public:
   ADMXRC3_HANDLE hDevice;
   const uint32_t hlsBaseAddr = 0x00000;
   const uint32_t inBaseAddr = 0x00000;
-  const uint32_t outBaseAddr = 0x80000;
+  //const uint32_t outBaseAddr = 0x80000;
+  const uint32_t outBaseAddr = 0x00000;
 
   Admxrc3Driver();
 

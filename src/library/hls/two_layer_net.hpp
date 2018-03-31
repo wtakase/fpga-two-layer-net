@@ -44,17 +44,18 @@
 
 #include <hls_stream.h>
 #include "two_layer_net_define.hpp"
-#include "affine.hpp"
-#include "softmax.hpp"
 
 namespace two_layer_net
 {
 
+static const unsigned int AFFINE1_IN_SIZE = INPUT_SIZE;
+static const unsigned int AFFINE1_OUT_SIZE = HIDDEN1_SIZE;
+static const unsigned int AFFINE2_IN_SIZE = HIDDEN1_SIZE;
+static const unsigned int AFFINE2_OUT_SIZE = OUTPUT_SIZE;
+static const unsigned int SOFTMAX_SIZE = OUTPUT_SIZE;
+
 void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &out);
-
 void Train_Batch(ExtMemWord *in, ExtMemWord *out);
-
-void StreamingAdd_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &out);
 
 }
 

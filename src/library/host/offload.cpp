@@ -96,7 +96,7 @@ void PlatformDeinit() {
 #endif
 }
 
-std::vector<float> trainMNIST(std::vector<tiny_cnn::vec_t> &trainImages, std::vector<tiny_cnn::label_t> &trainLabels, const unsigned int imageNum, float &usecPerImage, float *params) {
+std::vector<float> trainMNIST(std::vector<tiny_cnn::vec_t> &trainImages, std::vector<tiny_cnn::label_t> &trainLabels, const unsigned int imageNum, float &usecPerImage, float *params, unsigned int countLoopBase) {
 
   const unsigned int imageSize = trainImages[0].size();
 
@@ -125,7 +125,6 @@ std::vector<float> trainMNIST(std::vector<tiny_cnn::vec_t> &trainImages, std::ve
   }
 
   unsigned int countLoopNum = 1;
-  unsigned int count = BATCH_SIZE;
   if (imageNum > BATCH_SIZE) {
     countLoopNum = imageNum / BATCH_SIZE;
     if (imageNum % BATCH_SIZE > 0) {
@@ -135,108 +134,35 @@ std::vector<float> trainMNIST(std::vector<tiny_cnn::vec_t> &trainImages, std::ve
 
   unsigned int inOffset;
   std::vector<float> result;
-  for (unsigned int countLoop = 0; countLoop < countLoopNum; countLoop++) {
-///////////////////////
-    //std::cout << "-1: packedIn[0]: " << packedIn[0] << std::endl;
-///////////////////////
-    unsigned int countOffset = countLoop * count;
+  for (unsigned int countLoop = countLoopBase; countLoop < countLoopNum + countLoopBase; countLoop++) {
+    unsigned int countOffset = (countLoop * BATCH_SIZE) % TRAIN_SIZE;
     // pack images and labels
     inOffset = W_B_SIZE;
-    for (unsigned int i = 0; i < count; i++) {
+    for (unsigned int i = 0; i < BATCH_SIZE; i++) {
       for (unsigned int j = 0; j < imageSize + 1; j++) {
         if (j < imageSize) {
           packedIn[inOffset + i * (imageSize + 1) + j] = static_cast<ExtMemWord>(trainImages[countOffset + i][j]);
         } else {
-#if defined(HLSFIXED) && !defined(HLSNOSHIFT)
-          packedIn[inOffset + i * (imageSize + 1) + j] = static_cast<ExtMemWord>(static_cast<ShiftMemWord>(trainLabels[countOffset + i]) >> 4);
-#else
           packedIn[inOffset + i * (imageSize + 1) + j] = static_cast<ExtMemWord>(trainLabels[countOffset + i]);
-#endif
         }
       }
     }
-///////////////////////
-    //std::cout << "0: packedIn[0]: " << packedIn[0] << std::endl;
-///////////////////////
 #if defined(OFFLOAD) && !defined(RAWHLS)
     // copy inputs to accelerator
     thePlatform->copyBufferHostToAccel((void *)packedIn, sizeof(ExtMemWord) * packedInSize);
-///////////////////////
-    //std::cout << "1: packedIn[0]: " << packedIn[0] << std::endl;
-///////////////////////
     // call the accelerator in compute mode
     ExecAccel();
     // copy results back to host
-///////////////////////
-    //std::cout << "0: packedOut[0]: " << packedOut[0] << std::endl;
-///////////////////////
     thePlatform->copyBufferAccelToHost((void *)packedOut, sizeof(ExtMemWord) * packedOutSize);
 #else
     two_layer_net::BlackBoxJam((ExtMemWord *)packedIn, (ExtMemWord *)packedOut);
 #endif
     // get trained weights and biases
-///////////////////////
-    //std::cout << "2: packedIn[0]: " << packedIn[0] << std::endl;
-    //std::cout << "1: packedOut[0]: " << packedOut[0] << std::endl;
-///////////////////////
     memcpy(packedIn, packedOut, sizeof(ExtMemWord) * W_B_SIZE);
-///////////////////////
-    //std::cout << "3: packedIn[0]: " << packedIn[0] << std::endl;
-///////////////////////
   }
-///////////////////////
-    //std::cout << "5: packedIn[0]: " << packedIn[0] << std::endl;
-///////////////////////
 
   // put trained weights and biases
   for (unsigned int i = 0; i < W_B_SIZE; i++) {
-    result.push_back(static_cast<float>(packedOut[i]));
-  }
-
-  // NOTE(wtakase): Need comment out to prevent
-  // 'application performed illegal memory access and is being terminated'
-  //delete packedIn;
-  //delete packedOut;
-  //packedIn = 0;
-  //packedOut = 0;
-  return (result);
-}
-
-std::vector<float> add(const unsigned int imageNum, float &usecPerImage) {
-  // allocate host-side buffers for packed input and outputs
-  unsigned int packedInSize = 2;
-  unsigned int packedOutSize = 1;
-
-  if (INPUT_BUF_ENTRIES < packedInSize) {
-    throw "Not enough space in accelBufIn";
-  }
-  if (OUTPUT_BUF_ENTRIES < packedOutSize) {
-    throw "Not enough space in accelBufOut";
-  }
-
-  // NOTE(wtakase): Need comment out to prevent
-  // 'application performed illegal memory access and is being terminated'
-  //ExtMemWord *packedIn = new ExtMemWord[packedInSize];
-  //ExtMemWord *packedOut = new ExtMemWord[packedOutSize];
-  ExtMemWord packedIn[packedInSize];
-  ExtMemWord packedOut[packedOutSize];
-  packedIn[0] = static_cast<ExtMemWord>(imageNum);
-  packedIn[1] = static_cast<ExtMemWord>(imageNum);
-
-  std::vector<float> result;
-#if defined(OFFLOAD) && !defined(RAWHLS)
-  // copy inputs to accelerator
-  thePlatform->copyBufferHostToAccel((void *)packedIn, sizeof(ExtMemWord) * packedInSize);
-  // call the accelerator in compute mode
-  ExecAccel();
-  // copy results back to host
-  thePlatform->copyBufferAccelToHost((void *)packedOut, sizeof(ExtMemWord) * packedOutSize);
-#else
-  two_layer_net::BlackBoxJam((ExtMemWord *)packedIn, (ExtMemWord *)packedOut);
-#endif
-
-  // put trained weights and biases
-  for (unsigned int i = 0; i < 1; i++) {
     result.push_back(static_cast<float>(packedOut[i]));
   }
 
