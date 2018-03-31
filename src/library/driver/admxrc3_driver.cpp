@@ -31,7 +31,7 @@ void Admxrc3Driver::copyBufferHostToAccel(void* hostBuffer, size_t size) {
 }
 
 void Admxrc3Driver::copyBufferAccelToHost(void* hostBuffer, size_t size) {
-  accelRead(hostBuffer, size, outBaseAddr, 0);
+  accelRead(hostBuffer, size, outBaseAddr, 2);
 }
 
 void Admxrc3Driver::writeJamRegAddr(uint32_t address, uint32_t control) {

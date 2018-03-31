@@ -143,11 +143,7 @@ std::vector<float> trainMNIST(std::vector<tiny_cnn::vec_t> &trainImages, std::ve
         if (j < imageSize) {
           packedIn[inOffset + i * (imageSize + 1) + j] = static_cast<ExtMemWord>(trainImages[countOffset + i][j]);
         } else {
-#if defined(HLSFIXED) && !defined(HLSNOSHIFT)
-          packedIn[inOffset + i * (imageSize + 1) + j] = static_cast<ExtMemWord>(static_cast<ShiftMemWord>(trainLabels[countOffset + i]) >> 4);
-#else
           packedIn[inOffset + i * (imageSize + 1) + j] = static_cast<ExtMemWord>(trainLabels[countOffset + i]);
-#endif
         }
       }
     }
@@ -165,24 +161,11 @@ std::vector<float> trainMNIST(std::vector<tiny_cnn::vec_t> &trainImages, std::ve
     memcpy(packedIn, packedOut, sizeof(ExtMemWord) * W_B_SIZE);
 /////////////////////
 /*
-    for (unsigned int k = 0; k < 5; k++) {
-      std::cout << "1: w1[" << (k-0) << "]: " << packedOut[k] << std::endl;
+    std::cout << "ExtMemWord expected_out[19885] = {" << std::endl;
+    for (unsigned int k = 0; k < W_B_SIZE-1; k++) {
+      std::cout << packedOut[k] << "," << std::endl;
     }
-    for (unsigned int k = 5; k < 10; k++) {
-      std::cout << "1: affine1.out[" << (k-5) << "]: " << packedOut[k] << std::endl;
-    }
-    for (unsigned int k = 10; k < 20; k++) {
-      std::cout << "1: affine2.out[" << (k-10) << "]: " << packedOut[k] << std::endl;
-    }
-    for (unsigned int k = 20; k < 30; k++) {
-      std::cout << "1: softmaxWithLoss.out[" << (k-20) << "]: " << packedOut[k] << std::endl;
-    }
-    for (unsigned int k = 30; k < 40; k++) {
-      std::cout << "1: softmaxWithLoss.dx[" << (k-30) << "]: " << packedOut[k] << std::endl;
-    }
-    for (unsigned int k = 40; k < 50; k++) {
-      std::cout << "1: affine2.dx[" << (k-40) << "]: " << packedOut[k] << std::endl;
-    }
+    std::cout << packedOut[W_B_SIZE-1] << "};" << std::endl;
 */
 /////////////////////
   }

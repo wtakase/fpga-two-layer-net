@@ -34,10 +34,6 @@ const unsigned int bitsPerExtMemWord = sizeof(ExtMemWord) * 8;
 typedef ap_fixed<32, 8, AP_RND, AP_SAT> MulMemWord;
 #endif
 
-#if !defined(HLSNOSHIFT)
-typedef ap_fixed<32, 8, AP_RND, AP_SAT> ShiftMemWord;
-#endif
-
 } // namespace two_layer_net
 
 #elif defined(HLSHALF)
