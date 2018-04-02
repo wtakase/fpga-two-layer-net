@@ -47,7 +47,6 @@ namespace two_layer_net
 {
 
 void DoCompute(ExtMemWord *in, ExtMemWord *out) {
-//#pragma HLS DATAFLOW
   hls::stream<ExtMemWord> memInStrm("DoCompute.memInStrm");
   hls::stream<ExtMemWord> memOutStrm("DoCompute.memOutStrm");
 #pragma HLS STREAM depth=51285 variable=memInStrm
@@ -72,8 +71,7 @@ void BlackBoxJam(ExtMemWord *in, ExtMemWord *out) {
 #pragma HLS INTERFACE s_axilite port=in bundle=control
 #pragma HLS INTERFACE s_axilite port=out bundle=control
 #pragma HLS INTERFACE s_axilite port=return bundle=control
-  Train_Batch(in, out);
-  //DoCompute(in, out);
+  DoCompute(in, out);
 }
 
 } // namespace two_layer_net
@@ -85,6 +83,5 @@ void BlackBoxJam(two_layer_net::ExtMemWord *in, two_layer_net::ExtMemWord *out) 
 #pragma HLS INTERFACE s_axilite port=in bundle=control
 #pragma HLS INTERFACE s_axilite port=out bundle=control
 #pragma HLS INTERFACE s_axilite port=return bundle=control
-  two_layer_net::Train_Batch(in, out);
-  //two_layer_net::DoCompute(in, out);
+  two_layer_net::DoCompute(in, out);
 }

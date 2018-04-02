@@ -55,7 +55,6 @@ static const unsigned int AFFINE2_OUT_SIZE = OUTPUT_SIZE;
 static const unsigned int SOFTMAX_SIZE = OUTPUT_SIZE;
 
 void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &out);
-void Train_Batch(ExtMemWord *in, ExtMemWord *out);
 
 }
 
