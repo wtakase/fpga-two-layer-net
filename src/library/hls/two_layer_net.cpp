@@ -86,12 +86,16 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
 //#pragma HLS PIPELINE II=1
       IntMemWord sumBox = b1[j];
       for (unsigned int k = 0; k < AFFINE1_IN_SIZE; k++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
 #if defined(HLSFIXED) && !defined(HLSNOCAST)
         MulMemWord mulBox = static_cast<MulMemWord>(xtTrain[i][k]) * static_cast<MulMemWord>(w1[k * AFFINE1_OUT_SIZE + j]);
         sumBox += static_cast<IntMemWord>(mulBox);
 #else
-        sumBox += xtTrain[i][k] * w1[k * AFFINE1_OUT_SIZE + j];
+        IntMemWord mulBox;
+        mulBox = xtTrain[i][k] * w1[k * AFFINE1_OUT_SIZE + j];
+//#pragma HLS RESOURCE variable=mulBox core=MulnS
+        sumBox = mulBox + sumBox;
+        //sumBox += xtTrain[i][k] * w1[k * AFFINE1_OUT_SIZE + j];
 #endif
       }
       // ReLU forward
@@ -107,7 +111,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
   IntMemWord affine2Out[BATCH_SIZE * AFFINE2_OUT_SIZE];
   for (unsigned int i = 0; i < BATCH_SIZE; i++) {
     for (unsigned int j = 0; j < AFFINE2_OUT_SIZE; j++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
       IntMemWord sumBox = b2[j];
       for (unsigned int k = 0; k < AFFINE2_IN_SIZE; k++) {
 #if defined(HLSFIXED) && !defined(HLSNOCAST)
@@ -128,14 +132,14 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
     // forward
     IntMemWord xMax = affine2Out[i * SOFTMAX_SIZE];
     for (unsigned int j = 1; j < SOFTMAX_SIZE; j++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
       if (affine2Out[i * SOFTMAX_SIZE + j] > xMax) {
         xMax = affine2Out[i * SOFTMAX_SIZE + j];
       }
     }
     IntMemWord expXSubXmaxSum = 0;
     for (unsigned int j = 0; j < SOFTMAX_SIZE; j++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
       float xSubXMaxFloat = static_cast<float>(affine2Out[i * SOFTMAX_SIZE + j] - xMax);
 #if defined(FPGA)
       IntMemWord expXSubXmax = hls::expf(xSubXMaxFloat);
@@ -149,7 +153,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
     IntMemWord denominator = static_cast<IntMemWord>(BATCH_SIZE) * expXSubXmaxSum;
     volatile unsigned int label = static_cast<unsigned int>(xtTrain[i][INPUT_SIZE]);
     for (unsigned int j = 0; j < SOFTMAX_SIZE; j++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
 #if defined(HLSFIXED) && !defined(HLSNOCAST)
       MulMemWord mulBox = static_cast<MulMemWord>(softmaxOut[j]) / static_cast<MulMemWord>(expXSubXmaxSum);
       if (j == label) {
@@ -171,7 +175,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
   IntMemWord affine2Dx[BATCH_SIZE * AFFINE2_IN_SIZE];
   for (unsigned int i = 0; i < BATCH_SIZE; i++) {
     for (unsigned int j = 0; j < AFFINE2_IN_SIZE; j++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
       IntMemWord sumBox = 0;
       for (unsigned int k = 0; k < AFFINE2_OUT_SIZE; k++) {
 #if defined(HLSFIXED) && !defined(HLSNOCAST)
@@ -186,7 +190,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
   }
   for (unsigned int i = 0; i < AFFINE2_IN_SIZE; i++) {
     for (unsigned int j = 0; j < AFFINE2_OUT_SIZE; j++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
       IntMemWord sumBox = 0;
       for (unsigned int k = 0; k < BATCH_SIZE; k++) {
 #if defined(HLSFIXED) && !defined(HLSNOCAST)
@@ -200,7 +204,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
     }
   }
   for (unsigned int j = 0; j < AFFINE2_OUT_SIZE; j++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
     IntMemWord sumBox = 0;
     for (unsigned int k = 0; k < BATCH_SIZE; k++) {
       sumBox += softmaxDx[k * AFFINE2_OUT_SIZE + j];
@@ -211,7 +215,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
   // affine1 backward
   for (unsigned int i = 0; i < AFFINE1_IN_SIZE; i++) {
     for (unsigned int j = 0; j < AFFINE1_OUT_SIZE; j++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
       IntMemWord sumBox = 0;
       for (unsigned int k = 0; k < BATCH_SIZE; k++) {
         // ReLU backward
@@ -228,7 +232,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
     }
   }
   for (unsigned int j = 0; j < AFFINE1_OUT_SIZE; j++) {
-//#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=1
     IntMemWord sumBox = 0;
     for (unsigned int k = 0; k < BATCH_SIZE; k++) {
       // ReLU backward

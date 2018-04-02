@@ -19,10 +19,10 @@ namespace two_layer_net
 //typedef ap_fixed<31, 7> IntMemWord;
 //typedef ap_fixed<20, 4, AP_TRN, AP_SAT> IntMemWord;
 //typedef ap_fixed<16, 2, AP_TRN, AP_SAT> IntMemWord;
-//typedef ap_fixed<16, 4, AP_TRN, AP_SAT> IntMemWord;
+typedef ap_fixed<16, 4, AP_TRN, AP_SAT> IntMemWord;
 //typedef ap_fixed<14, 4, AP_TRN, AP_SAT> IntMemWord;
 //typedef ap_fixed<12, 4, AP_TRN, AP_SAT> IntMemWord;
-typedef ap_fixed<32, 8, AP_TRN, AP_SAT> IntMemWord;
+//typedef ap_fixed<32, 8, AP_TRN, AP_SAT> IntMemWord;
 
 //typedef ap_fixed<32, 8, AP_RND, AP_SAT> ExtMemWord;
 typedef ap_fixed<32, 8, AP_TRN, AP_SAT> ExtMemWord;
