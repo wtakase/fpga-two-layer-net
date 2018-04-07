@@ -87,16 +87,10 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
       IntMemWord sumBox = b1[j];
       for (unsigned int k = 0; k < AFFINE1_IN_SIZE; k++) {
 #pragma HLS PIPELINE II=1
-#if defined(HLSFIXED) && !defined(HLSNOCAST)
-        MulMemWord mulBox = static_cast<MulMemWord>(xtTrain[i][k]) * static_cast<MulMemWord>(w1[k * AFFINE1_OUT_SIZE + j]);
-        sumBox += static_cast<IntMemWord>(mulBox);
-#else
         IntMemWord mulBox;
         mulBox = xtTrain[i][k] * w1[k * AFFINE1_OUT_SIZE + j];
-//#pragma HLS RESOURCE variable=mulBox core=MulnS
         sumBox = mulBox + sumBox;
         //sumBox += xtTrain[i][k] * w1[k * AFFINE1_OUT_SIZE + j];
-#endif
       }
       // ReLU forward
       if (sumBox <= 0) {
@@ -114,12 +108,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
 #pragma HLS PIPELINE II=1
       IntMemWord sumBox = b2[j];
       for (unsigned int k = 0; k < AFFINE2_IN_SIZE; k++) {
-#if defined(HLSFIXED) && !defined(HLSNOCAST)
-        MulMemWord mulBox = static_cast<MulMemWord>(affine1Out[i * AFFINE2_IN_SIZE + k]) * static_cast<MulMemWord>(w2[k * AFFINE2_OUT_SIZE + j]);
-        sumBox += static_cast<IntMemWord>(mulBox);
-#else
         sumBox += affine1Out[i * AFFINE2_IN_SIZE + k] * w2[k * AFFINE2_OUT_SIZE + j];
-#endif
       }
       affine2Out[i * AFFINE2_OUT_SIZE + j] = sumBox;
     }
@@ -154,20 +143,11 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
     volatile unsigned int label = static_cast<unsigned int>(xtTrain[i][INPUT_SIZE]);
     for (unsigned int j = 0; j < SOFTMAX_SIZE; j++) {
 #pragma HLS PIPELINE II=1
-#if defined(HLSFIXED) && !defined(HLSNOCAST)
-      MulMemWord mulBox = static_cast<MulMemWord>(softmaxOut[j]) / static_cast<MulMemWord>(expXSubXmaxSum);
-      if (j == label) {
-        mulBox -= 1;
-      }
-      mulBox /= static_cast<MulMemWord>(BATCH_SIZE);
-      softmaxDx[i * SOFTMAX_SIZE + j] = static_cast<IntMemWord>(mulBox);
-#else
       if (j == label) {
         softmaxDx[i * SOFTMAX_SIZE + j] = (softmaxOut[j] - expXSubXmaxSum) / denominator;
       } else {
         softmaxDx[i * SOFTMAX_SIZE + j] = softmaxOut[j] / denominator;
       }
-#endif
     }
   }
 
@@ -178,12 +158,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
 #pragma HLS PIPELINE II=1
       IntMemWord sumBox = 0;
       for (unsigned int k = 0; k < AFFINE2_OUT_SIZE; k++) {
-#if defined(HLSFIXED) && !defined(HLSNOCAST)
-        MulMemWord mulBox = static_cast<MulMemWord>(softmaxDx[i * AFFINE2_OUT_SIZE + k]) * static_cast<MulMemWord>(w2[j * AFFINE2_OUT_SIZE + k]);
-        sumBox += static_cast<IntMemWord>(mulBox);
-#else
         sumBox += softmaxDx[i * AFFINE2_OUT_SIZE + k] * w2[j * AFFINE2_OUT_SIZE + k];
-#endif
       }
       affine2Dx[i * AFFINE2_IN_SIZE + j] = sumBox;
     }
@@ -193,12 +168,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
 #pragma HLS PIPELINE II=1
       IntMemWord sumBox = 0;
       for (unsigned int k = 0; k < BATCH_SIZE; k++) {
-#if defined(HLSFIXED) && !defined(HLSNOCAST)
-        MulMemWord mulBox = static_cast<MulMemWord>(affine1Out[k * AFFINE2_IN_SIZE + i]) * static_cast<MulMemWord>(softmaxDx[k * AFFINE2_OUT_SIZE + j]);
-        sumBox += static_cast<IntMemWord>(mulBox);
-#else
         sumBox += affine1Out[k * AFFINE2_IN_SIZE + i] * softmaxDx[k * AFFINE2_OUT_SIZE + j];
-#endif
       }
       w2[i * AFFINE2_OUT_SIZE + j] -= sumBox * LEARNING_RATE;
     }
@@ -220,12 +190,7 @@ void StreamingTrain_Batch(hls::stream<ExtMemWord> &in, hls::stream<ExtMemWord> &
       for (unsigned int k = 0; k < BATCH_SIZE; k++) {
         // ReLU backward
         if (affine1Out[k * AFFINE1_OUT_SIZE + j] != 0) {
-#if defined(HLSFIXED) && !defined(HLSNOCAST)
-          MulMemWord mulBox = static_cast<MulMemWord>(xtTrain[k][i]) * static_cast<MulMemWord>(affile2Dx[k * AFFINE1_OUT_SIZE + j]);
-          sumBox += static_cast<IntMemWord>(mulBox);
-#else
           sumBox += xtTrain[k][i] * affine2Dx[k * AFFINE1_OUT_SIZE + j];
-#endif
         }
       }
       w1[i * AFFINE1_OUT_SIZE + j] -= sumBox * LEARNING_RATE;

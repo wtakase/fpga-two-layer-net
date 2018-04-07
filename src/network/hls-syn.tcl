@@ -55,8 +55,7 @@ set config_clkperiod 4
 open_project $config_proj_name
 #add_files "$config_hwsrcdir/top.cpp $config_tlnlibdir/two_layer_net.cpp" -cflags "-std=c++0x -I$config_tlnlibdir -DFPGA"
 #add_files "$config_hwsrcdir/top.cpp $config_tlnlibdir/two_layer_net.cpp" -cflags "-std=c++0x -I$config_tlnlibdir -DHLSHALF -DFPGA"
-#add_files "$config_hwsrcdir/top.cpp $config_tlnlibdir/two_layer_net.cpp" -cflags "-std=c++0x -I$config_tlnlibdir -DHLSFIXED -DFPGA"
-add_files "$config_hwsrcdir/top.cpp $config_tlnlibdir/two_layer_net.cpp" -cflags "-std=c++0x -I$config_tlnlibdir -DHLSFIXED -DHLSNOCAST -DFPGA"
+add_files "$config_hwsrcdir/top.cpp $config_tlnlibdir/two_layer_net.cpp" -cflags "-std=c++0x -I$config_tlnlibdir -DHLSFIXED -DFPGA"
 
 #add_files -tb "$config_hwsrcdir/../tb/tb.cpp" -cflags "-std=c++0x -I$config_hwsrcdir/../tb/"
 
